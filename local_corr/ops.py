@@ -2,12 +2,12 @@ import torch
 from torch import Tensor
 from typing import Literal
 
-__all__ = ["corr"]
+__all__ = ["local_corr"]
 
 def to_pixel_coords(x, H, W):
     return torch.stack((W*(x[...,0]+1)/2, H*(x[...,1]+1)/2),dim = -1)
 
-def corr(
+def local_corr(
     im_A: Tensor, 
     im_B: Tensor, 
     warp: Tensor, 
@@ -73,7 +73,7 @@ def _setup_context(ctx, inputs, output):
 
 # Register the autograd function
 torch.library.register_autograd(
-    "local_corr::corr",
+    "local_corr::local_corr",
     _backward,
     setup_context=_setup_context
 )

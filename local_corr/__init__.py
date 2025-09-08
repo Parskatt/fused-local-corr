@@ -1,3 +1,3 @@
 import torch
 from . import _C, ops
-from .ops import corr
+from .ops import local_corr

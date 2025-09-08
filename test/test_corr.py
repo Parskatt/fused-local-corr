@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-from local_corr import corr
+from local_corr import local_corr
 
 def baseline_corr(im_A: torch.Tensor, im_B: torch.Tensor):
     out = torch.einsum("bnc, bhwc -> bnhw", im_A, im_B)
@@ -31,7 +31,7 @@ naive_compiled = torch.compile(baseline_corr)
 
 perf(baseline_corr,"naive_corr")
 # perf(naive_compiled,"naive_corr_compiled")
-perf(corr,"custom_corr")
+perf(local_corr,"custom_corr")
 
 
 # print(torch.einsum("bnc -> bn", a))

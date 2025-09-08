@@ -12,8 +12,6 @@ __global__ void fused_local_corr_1d_nearest_cuda(int B, int HW, int N, int C, in
   }
   int b = t/HW;
   int hw = t%HW;
-  // int IA = B*HW*C;
-  // int IB = B*H*W*C;
   int D = 2;
   // for whatever hypothesis
   for(int n=0; n < N; ++n){
@@ -111,25 +109,7 @@ __global__ void fused_local_corr_1d_bilinear_cuda(int B, int HW, int N, int C, i
       }
   }
 
-  result[r] = sum;  // for(int off_y=0; off_y < 2; off_y++){
-  //   if ((y_low + off_y) > H-1 || (y_low + off_y) < 0){
-  //     continue;
-  //   }
-  //   float alpha_y = (1-off_y)*(1-y_frac) + off_y*y_frac;
-  //   for(int off_x=0; off_x < 2; off_x++){
-  //     if ((x_low + off_x) > W-1 || (x_low + off_x) < 0){
-  //       continue;
-  //     }
-  //     float alpha_x = (1-off_x)*(1-x_frac) + off_x*x_frac;
-  //     int off_ib = ib + off_y * W*C + off_x * C;
-  //     float alpha = alpha_y*alpha_x;
-  //     // Next just iterate over the channels to get the correlation
-  //     for(int c=0; c < C; ++c){
-  //       tmp += alpha*im_A[ia+c]*im_B[off_ib+c];
-  //     }
-  //   }
-  // }
-  // result[r] = tmp;
+  result[r] = sum;
 }
 
 __global__ void fused_local_corr_1d_backward_wrt_A_nearest_cuda(int B, int pixels_A, int N, int C, int H, int W, const float* grad, const float* im_B, const int* warp, float* grad_A) {
