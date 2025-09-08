@@ -5,28 +5,39 @@
 
 namespace fused_local_corr {
 
-__global__ void fused_local_corr_1d_nearest_cuda(int B, int HW, int N, int C, int H, int W, const float* im_A, const float* im_B, const int* warp, float* result) {
+__global__ void fused_local_corr_1d_nearest_cuda(int B, int HW, int N, int C, int H, int W, const float* __restrict__ im_A, const float* __restrict__ im_B, const int* __restrict__ warp, float* __restrict__ result) {
   int t = blockIdx.x * blockDim.x + threadIdx.x;
-  if (t >= B*HW){
+  if (t >= B*HW*N){
     return;
   }
-  int b = t/HW;
-  int hw = t%HW;
+  int b = t/(HW*N);
+  int hwn = t%(HW*N);
+  int hw = hwn/N;
+  int n = hwn % N;
   int D = 2;
-  // for whatever hypothesis
-  for(int n=0; n < N; ++n){
-    // Now we know the index of the warp and thus of B (and implictly A)
-    int w = b*(HW*N*D) + hw*(N*D) + n*D;
-    int x = warp[w];
-    int y = warp[w+1];
-    int ia = b*HW*C + hw*C; //index for im_A
-    int ib = b*H*W*C + y*W*C + x*C; //index for im_B
-    int r = b*HW*N + hw*N + n; //index for result
-    // Next just iterate over the channels to get the correlation
-    for(int c=0; c < C; ++c){
-      result[r] += im_A[ia+c]*im_B[ib+c];
-    }
+
+  // Lookup indices
+  int w = b*(HW*N*D) + hw*(N*D) + n*D;
+  int x = warp[w];
+  int y = warp[w+1];
+  int ia = b*HW*C + hw*C; // index for im_A
+  int ib = b*H*W*C + y*W*C + x*C; // index for im_B
+  int r  = b*HW*N + hw*N + n; // index for result
+
+  // Accumulate dot product in registers and write once
+  float sum = 0.0f;
+  int c = 0;
+  // Vectorized path when possible
+  for (; c + 3 < C; c += 4) {
+    const float4 a = *reinterpret_cast<const float4*>(&im_A[ia + c]);
+    const float4 b4 = *reinterpret_cast<const float4*>(&im_B[ib + c]);
+    sum += a.x * b4.x + a.y * b4.y + a.z * b4.z + a.w * b4.w;
   }
+  // Tail
+  for (; c < C; ++c) {
+    sum += im_A[ia + c] * im_B[ib + c];
+  }
+  result[r] = sum;
 }
 
 __global__ void fused_local_corr_1d_bilinear_cuda(int B, int HW, int N, int C, int H, int W, const float* im_A, const float* im_B, const float* warp, float* result) {
@@ -215,15 +226,13 @@ at::Tensor corr_cuda(const at::Tensor& im_A, const at::Tensor& im_B, const at::T
   const float* im_B_ptr = im_B_contig.to(torch::kFloat).data_ptr<float>();
   float* result_ptr = result.data_ptr<float>();
   if(mode == "nearest"){
-    const auto shit = warp_contig.to(torch::kInt);
-    const int* warp_ptr = shit.to(torch::kInt).data_ptr<int>();
-    // fused_local_corr_1d_nearest(B, HW, N, C, H, W, im_A_ptr, im_B_ptr, warp_ptr, result_ptr);
+    const auto warp_i = warp_contig.to(torch::kInt);
+    const int* warp_ptr = warp_i.data_ptr<int>();
     fused_local_corr_1d_nearest_cuda<<<(numel+255)/256, 256>>>(B, HW, N, C, H, W, im_A_ptr, im_B_ptr, warp_ptr, result_ptr);
   }
   else if(mode == "bilinear"){
-    const auto shit = warp.contiguous().to(torch::kFloat);
-    const float* warp_ptr = warp.data_ptr<float>();
-    // fused_local_corr_1d_bilinear(B, HW, N, C, H, W, im_A_ptr, im_B_ptr, warp_ptr, result_ptr);
+    const auto warp_f = warp_contig.to(torch::kFloat);
+    const float* warp_ptr = warp_f.data_ptr<float>();
     fused_local_corr_1d_bilinear_cuda<<<(numel+255)/256, 256>>>(B, HW, N, C, H, W, im_A_ptr, im_B_ptr, warp_ptr, result_ptr);
   }
 

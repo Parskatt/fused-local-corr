@@ -5,10 +5,15 @@ import torch.nn.functional as F
 
 from local_corr import local_corr
 
+# Ensure best matmul precision for fair perf baselines
+if hasattr(torch, "set_float32_matmul_precision"):
+    torch.set_float32_matmul_precision("highest")
+
+compile_backend = 'inductor'
 
 def _available_devices():
     devices = ["cpu"]
-    if torch.cuda.is_available():
+    if torch.cuda.is_available() and os.environ.get("FUSED_LOCAL_CORR_TEST_CUDA", "0") == "1":
         devices.append("cuda")
     return devices
 
@@ -157,6 +162,60 @@ def test_perf_bilinear_vs_baseline(device):
 
     print(f"[bilinear][{device}] baseline: {t_base:.2f} ms/iter, op: {t_op:.2f} ms/iter")
 
+
+@pytest.mark.skipif(os.environ.get("FUSED_LOCAL_CORR_PERF") != "1", reason="Set FUSED_LOCAL_CORR_PERF=1 to run perf tests")
+@pytest.mark.skipif(not hasattr(torch, "compile"), reason="torch.compile not available")
+@pytest.mark.parametrize("device", _available_devices())
+def test_perf_nearest_compiled_baseline(device):
+    torch.manual_seed(6)
+    B, H, W, C, N = 4, 64, 64, 512, 64
+    HW = H * W
+    im_A = torch.randn(B, HW, C, device=device)
+    im_B = torch.randn(B, H, W, C, device=device)
+    cols = torch.randint(0, W, (B, HW, N), device=device)
+    rows = torch.randint(0, H, (B, HW, N), device=device)
+    warp = torch.stack((cols, rows), dim=-1).int()
+
+    compiled = torch.compile(_baseline_nearest, backend = compile_backend)
+
+    def run_base():
+        return _baseline_nearest(im_A, im_B, warp)
+
+    def run_compiled():
+        return compiled(im_A, im_B, warp)
+
+    iters = 20 if device == "cuda" else 5
+    t_base = _time_ms(run_base, iters, device)
+    t_comp = _time_ms(run_compiled, iters, device)
+    print(f"[nearest][{device}] baseline: {t_base:.2f} ms/iter, compiled: {t_comp:.2f} ms/iter")
+
+
+@pytest.mark.skipif(os.environ.get("FUSED_LOCAL_CORR_PERF") != "1", reason="Set FUSED_LOCAL_CORR_PERF=1 to run perf tests")
+@pytest.mark.skipif(not hasattr(torch, "compile"), reason="torch.compile not available")
+@pytest.mark.parametrize("device", _available_devices())
+def test_perf_bilinear_compiled_baseline(device):
+    torch.manual_seed(7)
+    B, H, W, C, N = 4, 64, 64, 256, 64
+    HW = H * W
+    im_A = torch.randn(B, HW, C, device=device)
+    im_B = torch.randn(B, H, W, C, device=device)
+    cols = torch.rand(B, HW, N, device=device) * W
+    rows = torch.rand(B, HW, N, device=device) * H
+    warp_pix = torch.stack((cols, rows), dim=-1)
+    warp_norm = _to_normalized(warp_pix, H, W)
+
+    compiled = torch.compile(_baseline_bilinear, backend = compile_backend)
+
+    def run_base():
+        return _baseline_bilinear(im_A, im_B, warp_norm)
+
+    def run_compiled():
+        return compiled(im_A, im_B, warp_norm)
+
+    iters = 20 if device == "cuda" else 5
+    t_base = _time_ms(run_base, iters, device)
+    t_comp = _time_ms(run_compiled, iters, device)
+    print(f"[bilinear][{device}] baseline: {t_base:.2f} ms/iter, compiled: {t_comp:.2f} ms/iter")
 
 @pytest.mark.parametrize("device", _available_devices())
 def test_forward_bilinear_matches_baseline(device):

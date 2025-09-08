@@ -62,3 +62,4 @@ compile_commands.json
 *.whl
 
 uv.lock
+.python-version
