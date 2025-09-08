@@ -1,0 +1,191 @@
+name: Build manylinx wheels and deploy
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - v*
+  workflow_dispatch:
+
+jobs:
+  build_wheels:
+    name: Build Wheel
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # - torch-version: "2.5.1"
+          #   python-version: "3.9"
+          #   cuda-version: "11.8.0"
+          #   arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+          #   cibw-build: "cp39-*64"
+          #   cibw-build-image: "pytorch/manylinux2_28-builder:cuda11.8"
+          #   cibw-build-cuda-version: "11.8"
+          #   cibw-build-torch-cuda-version: "118"
+          #   cibw-build-cuda-compat-version: "11-8"
+          # - torch-version: "2.5.1"
+          #   python-version: "3.9"
+          #   cuda-version: "12.1.1"
+          #   arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+          #   cibw-build: "cp39-*64"
+          #   cibw-build-image: "pytorch/manylinux2_28-builder:cuda12.1"
+          #   cibw-build-cuda-version: "12.1"
+          #   cibw-build-torch-cuda-version: "121"
+          #   cibw-build-cuda-compat-version: "12-1"
+          - torch-version: "2.5.1"
+            python-version: "3.9"
+            cuda-version: "12.4.0"
+            arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+            cibw-build: "cp39-*64"
+            cibw-build-image: "pytorch/manylinux2_28-builder:cuda12.4"
+            cibw-build-cuda-version: "12.4"
+            cibw-build-torch-cuda-version: "124"
+            cibw-build-cuda-compat-version: "12-4"
+          # - torch-version: "2.5.1"
+          #   python-version: "3.10"
+          #   cuda-version: "11.8.0"
+          #   arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+          #   cibw-build: "cp310-*64"
+          #   cibw-build-image: "pytorch/manylinux2_28-builder:cuda11.8"
+          #   cibw-build-cuda-version: "11.8"
+          #   cibw-build-torch-cuda-version: "118"
+          #   cibw-build-cuda-compat-version: "11-8"
+          # - torch-version: "2.5.1"
+          #   python-version: "3.10"
+          #   cuda-version: "12.1.1"
+          #   arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+          #   cibw-build: "cp310-*64"
+          #   cibw-build-image: "pytorch/manylinux2_28-builder:cuda12.1"
+          #   cibw-build-cuda-version: "12.1"
+          #   cibw-build-torch-cuda-version: "121"
+          #   cibw-build-cuda-compat-version: "12-1"
+          - torch-version: "2.5.1"
+            python-version: "3.10"
+            cuda-version: "12.4.0"
+            arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+            cibw-build: "cp310-*64"
+            cibw-build-image: "pytorch/manylinux2_28-builder:cuda12.4"
+            cibw-build-cuda-version: "12.4"
+            cibw-build-torch-cuda-version: "124"
+            cibw-build-cuda-compat-version: "12-4"
+          # - torch-version: "2.5.1"
+          #   python-version: "3.11"
+          #   cuda-version: "11.8.0"
+          #   arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+          #   cibw-build: "cp311-*64"
+          #   cibw-build-image: "pytorch/manylinux2_28-builder:cuda11.8"
+          #   cibw-build-cuda-version: "11.8"
+          #   cibw-build-torch-cuda-version: "118"
+          #   cibw-build-cuda-compat-version: "11-8"
+          # - torch-version: "2.5.1"
+          #   python-version: "3.11"
+          #   cuda-version: "12.1.1"
+          #   arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+          #   cibw-build: "cp311-*64"
+          #   cibw-build-image: "pytorch/manylinux2_28-builder:cuda12.1"
+          #   cibw-build-cuda-version: "12.1"
+          #   cibw-build-torch-cuda-version: "121"
+          #   cibw-build-cuda-compat-version: "12-1"
+          - torch-version: "2.5.1"
+            python-version: "3.11"
+            cuda-version: "12.4.0"
+            arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+            cibw-build: "cp311-*64"
+            cibw-build-image: "pytorch/manylinux2_28-builder:cuda12.4"
+            cibw-build-cuda-version: "12.4"
+            cibw-build-torch-cuda-version: "124"
+            cibw-build-cuda-compat-version: "12-4"
+          # - torch-version: "2.5.1"
+          #   python-version: "3.12"
+          #   cuda-version: "11.8.0"
+          #   arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+          #   cibw-build: "cp312-*64"
+          #   cibw-build-image: "pytorch/manylinux2_28-builder:cuda11.8"
+          #   cibw-build-cuda-version: "11.8"
+          #   cibw-build-torch-cuda-version: "118"
+          #   cibw-build-cuda-compat-version: "11-8"
+          # - torch-version: "2.5.1"
+          #   python-version: "3.12"
+          #   cuda-version: "12.1.1"
+          #   arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+          #   cibw-build: "cp312-*64"
+          #   cibw-build-image: "pytorch/manylinux2_28-builder:cuda12.1"
+          #   cibw-build-cuda-version: "12.1"
+          #   cibw-build-torch-cuda-version: "121"
+          #   cibw-build-cuda-compat-version: "12-1"
+          - torch-version: "2.5.1"
+            python-version: "3.12"
+            cuda-version: "12.4.0"
+            arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
+            cibw-build: "cp312-*64"
+            cibw-build-image: "pytorch/manylinux2_28-builder:cuda12.4"
+            cibw-build-cuda-version: "12.4"
+            cibw-build-torch-cuda-version: "124"
+            cibw-build-cuda-compat-version: "12-4"
+
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+    
+      - name: Checkout fused-local-corr
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install cibuildwheel
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install "cibuildwheel<3.0"
+
+      - name: Build wheels for Pytorch ${{ matrix.torch-version }} + CUDA ${{ matrix.cibw-build-torch-cuda-version }}
+        run: |
+          python3 -m cibuildwheel --output-dir dist
+        env:
+          CIBW_BUILD: ${{ matrix.cibw-build }}
+          CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.cibw-build-image }}
+          CIBW_BEFORE_BUILD_LINUX: >
+            python -m pip install -U pip setuptools wheel packaging auditwheel-symbols ninja cmake numpy &&
+            python -m pip install --no-cache-dir torch==${{ matrix.torch-version }} --index-url https://download.pytorch.org/whl/cu${{ matrix.cibw-build-torch-cuda-version }}
+          CIBW_ENVIRONMENT: >
+            CUDA_HOME="/usr/local/cuda-${{ matrix.cibw-build-cuda-version }}" 
+            CUDACXX="/usr/local/cuda-${{ matrix.cibw-build-cuda-version }}/bin/nvcc" 
+            CFLAGS="-I/usr/include" 
+            LDFLAGS="-L/usr/lib" 
+            AUDITWHEEL_PLAT="manylinux_2_28_$(uname -m)" 
+            TORCH_CUDA_ARCH_LIST="${{ matrix.arch }}" 
+            MAX_JOBS=1
+          CIBW_SKIP: "*musllinux*"
+          CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel repair -w /tmp/cibuildwheel/repaired_wheel {wheel} --exclude libc10.so --exclude libc10* --exclude libtorch.so --exclude libtorch* --exclude libcu* --exclude libnccl*"
+          
+      - name: Log Built Wheels
+        run: |
+          wheel_name=$(ls dist/*whl | xargs -n 1 basename)
+          echo "wheel_name=${wheel_name}" >> $GITHUB_ENV
+          ls dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{env.wheel_name}}
+          path: dist/${{env.wheel_name}}
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ./dist/${{env.wheel_name}}

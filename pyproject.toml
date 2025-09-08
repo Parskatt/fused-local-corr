@@ -1,0 +1,30 @@
+[project]
+name = "fused-local-corr"
+version = "0.0.1"
+description = "Fused Local Correlation in PyTorch"
+readme = { file = "README.md", content-type = "text/markdown" }
+authors = [
+    { name = "Johan Edstedt", email = "johan.edstedt@liu.se" },
+]
+requires-python = ">=3.10"
+dependencies = [
+    "torch==2.5.1",
+]
+[build-system]
+requires = [
+    "setuptools",
+    "wheel",
+    "numpy",
+]
+build-backend = "setuptools.build_meta"
+
+# license = { file = "LICENSE" }
+# classifiers = [
+#     "Programming Language :: Python :: 3",
+#     "License :: OSI Approved :: MIT License",
+#     "Operating System :: OS Independent",
+# ]
+
+# [project.urls]
+# homepage = "https://github.com/johan-edstedt/fused-local-corr"
+# repository = "https://github.com/johan-edstedt/fused-local-corr"
