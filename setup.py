@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-import torch
+import shutil
 import glob
 
 from setuptools import find_packages, setup
@@ -21,11 +21,13 @@ library_name = "local_corr"
 
 def get_extensions():
     debug_mode = os.getenv("DEBUG", "0") == "1"
-    use_cuda = os.getenv("USE_CUDA", "1") == "1"
     if debug_mode:
         print("Compiling in debug mode")
 
-    use_cuda = use_cuda and torch.cuda.is_available() and CUDA_HOME is not None
+    # Build CUDA if CUDA toolkit is present, even if no GPUs are visible
+    has_nvcc = shutil.which("nvcc") is not None
+    has_cuda_toolkit = (CUDA_HOME is not None) or has_nvcc
+    use_cuda = has_cuda_toolkit
     extension = CUDAExtension if use_cuda else CppExtension
 
     extra_link_args = ["-fopenmp"]

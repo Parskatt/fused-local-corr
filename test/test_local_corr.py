@@ -1,4 +1,4 @@
-import math
+import os
 import pytest
 import torch
 import torch.nn.functional as F
@@ -86,6 +86,76 @@ def test_backward_wrt_A_nearest_matches_baseline(device):
     grad_op = im_A_op.grad.detach().clone()
 
     torch.testing.assert_close(grad_op, grad_ref, atol=1e-6, rtol=1e-5)
+
+
+def _maybe_sync(device: str):
+    if device == "cuda":
+        torch.cuda.synchronize()
+
+
+def _time_ms(fn, iters: int, device: str) -> float:
+    # Warmup
+    with torch.inference_mode():
+        fn()
+        _maybe_sync(device)
+    import time
+    t0 = time.perf_counter()
+    with torch.inference_mode():
+        for _ in range(iters):
+            fn()
+        _maybe_sync(device)
+    return (time.perf_counter() - t0) * 1e3 / max(iters, 1)
+
+
+@pytest.mark.skipif(os.environ.get("FUSED_LOCAL_CORR_PERF") != "1", reason="Set FUSED_LOCAL_CORR_PERF=1 to run perf tests")
+@pytest.mark.parametrize("device", _available_devices())
+def test_perf_nearest_vs_baseline(device):
+    torch.manual_seed(4)
+    B, H, W, C, N = 4, 64, 64, 512, 64
+    HW = H * W
+    im_A = torch.randn(B, HW, C, device=device)
+    im_B = torch.randn(B, H, W, C, device=device)
+    cols = torch.randint(0, W, (B, HW, N), device=device)
+    rows = torch.randint(0, H, (B, HW, N), device=device)
+    warp = torch.stack((cols, rows), dim=-1).int()
+
+    def run_baseline():
+        return _baseline_nearest(im_A, im_B, warp)
+
+    def run_op():
+        return local_corr(im_A, im_B, warp, mode="nearest", normalized_coords=False)
+
+    iters = 20 if device == "cuda" else 5
+    t_base = _time_ms(run_baseline, iters, device)
+    t_op = _time_ms(run_op, iters, device)
+
+    print(f"[nearest][{device}] baseline: {t_base:.2f} ms/iter, op: {t_op:.2f} ms/iter")
+
+
+@pytest.mark.skipif(os.environ.get("FUSED_LOCAL_CORR_PERF") != "1", reason="Set FUSED_LOCAL_CORR_PERF=1 to run perf tests")
+@pytest.mark.parametrize("device", _available_devices())
+def test_perf_bilinear_vs_baseline(device):
+    torch.manual_seed(5)
+    B, H, W, C, N = 4, 64, 64, 256, 64
+    HW = H * W
+    im_A = torch.randn(B, HW, C, device=device)
+    im_B = torch.randn(B, H, W, C, device=device)
+    cols = torch.rand(B, HW, N, device=device) * W
+    rows = torch.rand(B, HW, N, device=device) * H
+    warp_pix = torch.stack((cols, rows), dim=-1)
+    warp_norm = _to_normalized(warp_pix, H, W)
+
+    def run_baseline():
+        return _baseline_bilinear(im_A, im_B, warp_norm)
+
+    def run_op():
+        return local_corr(im_A, im_B, warp_norm, mode="bilinear", normalized_coords=True)
+
+    iters = 20 if device == "cuda" else 5
+    t_base = _time_ms(run_baseline, iters, device)
+    t_op = _time_ms(run_op, iters, device)
+
+    print(f"[bilinear][{device}] baseline: {t_base:.2f} ms/iter, op: {t_op:.2f} ms/iter")
 
 
 @pytest.mark.parametrize("device", _available_devices())

@@ -26,9 +26,9 @@ def local_corr(
     H,W = im_B.shape[-3:-1]
     if normalized_coords:
         warp = to_pixel_coords(warp, H, W)
-    return torch.ops.local_corr.corr.default(im_A, im_B, warp, mode)
+    return torch.ops.fused_local_corr.corr(im_A, im_B, warp, mode)
 
-@torch.library.register_fake("local_corr::corr")
+@torch.library.register_fake("fused_local_corr::corr")
 def _(a, b, c, mode="nearest"):
     torch._check(a.dtype == torch.float)
     torch._check(b.dtype == torch.float)
@@ -51,7 +51,7 @@ def _backward(ctx, grad):
     mode = ctx.mode  # Retrieve saved interpolation mode
     grad_a, grad_b, grad_c = None, None, None
     if ctx.needs_input_grad[0]:
-        grad_a = torch.ops.local_corr.corr_backward_A(grad, b, c, mode)
+        grad_a = torch.ops.fused_local_corr.corr_backward_A(grad, b, c, mode)
     
     if ctx.needs_input_grad[1]:
         raise NotImplementedError("No backward impl. for im_B yet")
@@ -76,7 +76,7 @@ def _setup_context(ctx, inputs, output):
 
 # Register the autograd function
 torch.library.register_autograd(
-    "local_corr::local_corr",
+    "fused_local_corr::corr",
     _backward,
     setup_context=_setup_context
 )
