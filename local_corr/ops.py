@@ -26,16 +26,19 @@ def local_corr(
     H,W = im_B.shape[-3:-1]
     if normalized_coords:
         warp = to_pixel_coords(warp, H, W)
-    # print(warp)
-    # print(im_A.shape, im_B.shape, warp.shape, mode)
     return torch.ops.local_corr.corr.default(im_A, im_B, warp, mode)
 
 @torch.library.register_fake("local_corr::corr")
 def _(a, b, c, mode="nearest"):
     torch._check(a.dtype == torch.float)
     torch._check(b.dtype == torch.float)
-    torch._check(c.dtype == torch.int)
+    # warp dtype depends on interpolation mode: int for nearest, float for bilinear
+    if mode == "bilinear":
+        torch._check(c.dtype == torch.float)
+    else:  # nearest
+        torch._check(c.dtype in (torch.int, torch.long, torch.float))
     torch._check(a.device == b.device)
+    torch._check(c.device == a.device)
     torch._check(
         mode in ["nearest", "bilinear"], 
         f"Interpolation mode must be 'nearest' or 'bilinear', got: {mode}"

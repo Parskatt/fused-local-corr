@@ -130,7 +130,7 @@ jobs:
             python-version: "3.13"
             cuda-version: "12.4.0"
             arch: "6.0;6.1;6.2;7.0;7.5;8.0;8.6;9.0+PTX"
-            cibw-build: "cp312-*64"
+            cibw-build: "cp313-*64"
             cibw-build-image: "pytorch/manylinux2_28-builder:cuda12.4"
             cibw-build-cuda-version: "12.4"
             cibw-build-torch-cuda-version: "124"
