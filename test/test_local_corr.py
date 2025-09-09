@@ -13,7 +13,7 @@ compile_backend = 'inductor'
 
 def _available_devices():
     devices = ["cpu"]
-    if torch.cuda.is_available() and os.environ.get("FUSED_LOCAL_CORR_TEST_CUDA", "0") == "1":
+    if torch.cuda.is_available():
         devices.append("cuda")
     return devices
 

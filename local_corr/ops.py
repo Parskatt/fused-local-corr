@@ -46,6 +46,26 @@ def _(a, b, c, mode="nearest"):
     B, HW, N = c.shape[0], c.shape[1], c.shape[2]
     return torch.zeros((B, HW, N)).to(a)
 
+@torch.library.register_fake("fused_local_corr::corr_backward_A")
+def _(grad, im_B, warp, mode="nearest"):
+    # grad: (B, HW, N), im_B: (B, H, W, C), warp: (B, HW, N, 2)
+    torch._check(grad.dtype == torch.float)
+    torch._check(im_B.dtype == torch.float)
+    if mode == "bilinear":
+        torch._check(warp.dtype == torch.float)
+    else:
+        torch._check(warp.dtype in (torch.int, torch.long, torch.float))
+    torch._check(grad.device == im_B.device)
+    torch._check(warp.device == grad.device)
+    torch._check(
+        mode in ["nearest", "bilinear"],
+        f"Interpolation mode must be 'nearest' or 'bilinear', got: {mode}"
+    )
+    B = grad.shape[0]
+    HW = grad.shape[1]
+    C = im_B.shape[-1]
+    return torch.zeros((B, HW, C)).to(im_B)
+
 def _backward(ctx, grad):
     a, b, c = ctx.saved_tensors
     mode = ctx.mode  # Retrieve saved interpolation mode
