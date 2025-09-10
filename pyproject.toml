@@ -1,6 +1,6 @@
 [project]
 name = "fused-local-corr"
-version = "0.2.0"
+version = "0.2.2"
 description = "Fused Local Correlation in PyTorch"
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { file = "LICENSE" }
